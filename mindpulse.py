@@ -31,7 +31,15 @@ st.markdown("""
     .comment-time { font-weight: normal; opacity: 0.6; margin-left: 8px; }
     .comment-text { font-size: 14px; opacity: 0.9; }
 
-    .stButton button { width: 100%; border-radius: 8px; padding: 4px 12px;}
+    .stButton button { 
+        width: auto !important; 
+        min-width: 85px !important;
+        border-radius: 8px; 
+        padding: 4px 16px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
     
     .comment-like-btn button { padding: 2px 5px !important; min-height: 0px !important; font-size: 12px !important; }
 </style>
@@ -196,7 +204,7 @@ def render_post_card(idx, post):
             st.markdown(post_html.replace('\n', ''), unsafe_allow_html=True)
             
             # Interactive Buttons (Like, Repost)
-            act1, act2, _ = st.columns([2, 2, 10])
+            act1, act2, _ = st.columns([2, 2, 14])
             
             heart_icon = "❤️" if post['is_liked'] else "🤍"
             act1.button(f"{heart_icon} {post['likes']}", key=f"like_{post['id']}_pg_{page}", on_click=toggle_like, args=(idx,))
