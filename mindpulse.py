@@ -6,28 +6,22 @@ from streamlit_option_menu import option_menu
 # ==========================================
 # 1. PAGE CONFIGURATION & CSS
 # ==========================================
-st.set_page_config(page_title="MindPulse | Dashboard", page_icon="🫀", layout="wide")
+st.set_page_config(page_title="MindPulse | Dashboard", page_icon="🧠", layout="wide")
 
 st.markdown("""
 <style>
     .stApp { font-family: 'Inter', sans-serif; }
     
     .badge {
-        padding: 6px 14px; border-radius: 20px; font-size: 15px; font-weight: 700;
-        display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px;
+        padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 700;
+        display: inline-flex; align-items: center; gap: 6px; 
     }
-    .badge-depression { background-color: #F3E8FF; color: #7E22CE; }
-    .badge-anxiety { background-color: #FEE2E2; color: #DC2626; }
-    .badge-lonely { background-color: #E0F2FE; color: #2563EB; }
-    .badge-mentalhealth { background-color: #DCFCE7; color: #16A34A; }
-    .badge-suicidewatch { background-color: #FCE7F3; color: #BE185D; }
-    
-    .metric-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-    .metric-label { font-size: 13px; font-weight: 600; opacity: 0.8; }
-    .progress-bg { background-color: rgba(128, 128, 128, 0.2); height: 6px; border-radius: 3px; width: 100%; overflow: hidden; }
-    .progress-fill { background-color: #818CF8; height: 100%; border-radius: 3px; }
+    .badge-depression { background-color: #F3E8FF; color: #7E22CE; border: 1px solid #D8B4FE; }
+    .badge-anxiety { background-color: #FEE2E2; color: #DC2626; border: 1px solid #FCA5A5; }
+    .badge-lonely { background-color: #E0F2FE; color: #2563EB; border: 1px solid #93C5FD; }
+    .badge-mentalhealth { background-color: #DCFCE7; color: #16A34A; border: 1px solid #86EFAC; }
+    .badge-suicidewatch { background-color: #FCE7F3; color: #BE185D; border: 1px solid #F9A8D4; }
 
-    /* Comment Styling */
     .comment-block { 
         padding: 10px 12px; background: rgba(128,128,128,0.05); 
         border-radius: 8px; margin-bottom: 4px;
@@ -39,7 +33,6 @@ st.markdown("""
 
     .stButton button { width: 100%; border-radius: 8px; }
     
-    /* Make comment like buttons smaller */
     .comment-like-btn button { padding: 2px 5px !important; min-height: 0px !important; font-size: 12px !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -62,36 +55,67 @@ def map_label(raw_label):
     elif "fear" in label or "anxiety" in label: return "Anxiety", "badge-anxiety", "😰"
     elif "anger" in label or "suicide" in label: return "Suicide Watch", "badge-suicidewatch", "🚨"
     elif "lonely" in label: return "Loneliness", "badge-lonely", "😶"
-    else: return "Mental Health", "badge-mentalhealth", "🧠"
+    else: return "Mental Health", "badge-mentalhealth", "🫂"
 
 def current_time_str():
     return datetime.now().strftime("%I:%M %p")
 
-# Expanded session state to include comment likes
+# Added mock confidence levels
+    # Expanded session state with real RMHD data and mock comments
 if 'feed' not in st.session_state:
     st.session_state.feed = [
         {
-            "id": "post_1", "user": "User_837", "time": "10:30 AM", 
-            "text": "I've been feeling really overwhelmed lately. Can't focus, my chest is tight. It's making it hard to get through the day. Is this just stress?", 
-            "label": "Anxiety", "css": "badge-anxiety", "emoji": "😰", 
-            "likes": 14, "is_liked": False,
-            "reposts": 2, "is_reposted": False,
+            "id": "post_sw_1", "user": "Anon_821", "time": "Just now", 
+            "text": "Goodbye.", 
+            "label": "Suicide Watch", "css": "badge-suicidewatch", "emoji": "🚨", "confidence": 0.98,
+            "likes": 2, "is_liked": False, "reposts": 0, "is_reposted": False,
             "comments": [
-                {"user": "Dr_Smith", "time": "11:15 AM", "text": "Take deep breaths. Try the 4-7-8 method.", "likes": 5, "is_liked": False},
-                {"user": "Anon_12", "time": "12:05 PM", "text": "I feel exactly the same way right now.", "likes": 1, "is_liked": False}
+                {"user": "AutoMod", "time": "Just now", "text": "If you or someone you know is struggling, please reach out for help immediately. You can dial 988 or text HOME to 741741 to reach the Crisis Text Line. You are not alone and help is available.", "likes": 12, "is_liked": False},
+                {"user": "CaringSoul", "time": "Just now", "text": "Please stay. We are here and we are listening. What is happening right now?", "likes": 5, "is_liked": False}
             ]
         },
         {
-            "id": "post_2", "user": "User_412", "time": "Yesterday", 
-            "text": "Nobody really understands what it's like. I feel completely disconnected from everyone around me.", 
-            "label": "Loneliness", "css": "badge-lonely", "emoji": "😶", 
-            "likes": 8, "is_liked": False,
-            "reposts": 0, "is_reposted": False,
-            "comments": []
+            "id": "post_anx_1", "user": "Runner_99", "time": "20 mins ago", 
+            "text": "I feel like I panic so hard If I don't eat well enough before or immediately after a run. If I eat too much or unhealthy though, I also panic. Anyone else?", 
+            "label": "Anxiety", "css": "badge-anxiety", "emoji": "😰", "confidence": 0.92,
+            "likes": 45, "is_liked": False, "reposts": 3, "is_reposted": False,
+            "comments": [
+                {"user": "HealthNut", "time": "15 mins ago", "text": "Yes! Blood sugar spikes and drops can trigger physiological responses that perfectly mimic anxiety attacks. It happens to me too.", "likes": 18, "is_liked": False},
+                {"user": "TrackStar", "time": "5 mins ago", "text": "I get this exactly. I found that half a banana 30 mins before is the perfect safe middle ground. Hang in there!", "likes": 8, "is_liked": False}
+            ]
+        },
+        {
+            "id": "post_dep_1", "user": "Tired_01", "time": "1 hr ago", 
+            "text": "I want to feel notmal. I am tired and sick of everyday struggles. I have no one nothing in my life", 
+            "label": "Depression", "css": "badge-depression", "emoji": "😔", "confidence": 0.95,
+            "likes": 89, "is_liked": False, "reposts": 12, "is_reposted": False,
+            "comments": [
+                {"user": "BlueSky", "time": "45 mins ago", "text": "I hear you. The exhaustion is so heavy sometimes. Just taking it one hour at a time is enough for today.", "likes": 24, "is_liked": False}
+            ]
+        },
+        {
+            "id": "post_mh_1", "user": "HealingJourney", "time": "3 hrs ago", 
+            "text": "therapy today at two , wish me luck", 
+            "label": "Mental Health", "css": "badge-mentalhealth", "emoji": "🌱", "confidence": 0.88,
+            "likes": 156, "is_liked": False, "reposts": 4, "is_reposted": False,
+            "comments": [
+                {"user": "Dr_Smith", "time": "2 hrs ago", "text": "The hardest part is simply showing up. Proud of you for taking this step!", "likes": 40, "is_liked": False},
+                {"user": "Sunshine", "time": "1 hr ago", "text": "Good luck! You've got this. Let us know how it goes if you feel up to it.", "likes": 15, "is_liked": False}
+            ]
+        },
+        {
+            "id": "post_lon_1", "user": "Echo_Chamber", "time": "5 hrs ago", 
+            "text": "Need someone to talk to", 
+            "label": "Loneliness", "css": "badge-lonely", "emoji": "😶", "confidence": 0.91,
+            "likes": 34, "is_liked": False, "reposts": 1, "is_reposted": False,
+            "comments": [
+                {"user": "NightOwl", "time": "4 hrs ago", "text": "Hey, I'm around. What's on your mind today?", "likes": 6, "is_liked": False},
+                {"user": "FriendlyStranger", "time": "3 hrs ago", "text": "Sending a virtual hug. Feel free to vent here, we are listening.", "likes": 9, "is_liked": False}
+            ]
         }
     ]
 
-# Callbacks for Posts
+# Callbacks
 def toggle_like(post_idx):
     if st.session_state.feed[post_idx]["is_liked"]:
         st.session_state.feed[post_idx]["likes"] -= 1
@@ -112,60 +136,78 @@ def add_comment(post_idx, comment_text):
     if comment_text.strip():
         new_comment = {
             "user": "You", "time": current_time_str(), "text": comment_text.strip(),
-            "likes": 0, "is_liked": False # Initialize new comments with 0 likes
+            "likes": 0, "is_liked": False 
         }
         st.session_state.feed[post_idx]["comments"].append(new_comment)
 
-# Callback for Comments
 def toggle_comment_like(post_idx, comment_idx):
     if st.session_state.feed[post_idx]["comments"][comment_idx].get("is_liked", False):
         st.session_state.feed[post_idx]["comments"][comment_idx]["likes"] -= 1
         st.session_state.feed[post_idx]["comments"][comment_idx]["is_liked"] = False
     else:
-        # Using .get() ensures backward compatibility if older comments lack the key
         current_likes = st.session_state.feed[post_idx]["comments"][comment_idx].get("likes", 0)
         st.session_state.feed[post_idx]["comments"][comment_idx]["likes"] = current_likes + 1
         st.session_state.feed[post_idx]["comments"][comment_idx]["is_liked"] = True
 
+
 # ==========================================
-# 3. REUSABLE UI COMPONENT
+# 3. REUSABLE UI COMPONENT (Single Column Layout)
 # ==========================================
 def render_post_card(idx, post):
-    """A helper function to draw a post card exactly the same way on any page."""
-    left_col, right_col = st.columns([2, 1])
-
-    with left_col:
+    """Draws a post card seamlessly integrating the classification label and confidence."""
+    
+    # Optional: We wrap the card in columns to prevent it from stretching too wide on massive screens
+    _, center_col, _ = st.columns([1, 8, 1])
+    
+    with center_col:
         with st.container(border=True): 
-            # Post Content
-            st.markdown(f"""
-            <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                <div style="background-color: #818CF8; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px;">
-                    {post['user'][0].upper()}
+            
+            # Format the confidence percentage to 1 decimal place (e.g., 94.2%)
+            conf_pct = f"{post.get('confidence', 0) * 100:.1f}%"
+            
+            # Header Row: Avatar & Name on the left, Classification Badge on the right
+            post_html = f"""
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                
+                <div style="display: flex; align-items: center;">
+                    <div style="background-color: #818CF8; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; flex-shrink: 0;">
+                        {post['user'][0].upper()}
+                    </div>
+                    <div style="line-height: 1.2;">
+                        <div style="font-weight: bold; font-size: 15px;">{post['user']}</div>
+                        <div style="font-size: 12px; opacity: 0.6;">{post['time']}</div>
+                    </div>
                 </div>
-                <div style="line-height: 1.2;">
-                    <div style="font-weight: bold; font-size: 15px;">{post['user']}</div>
-                    <div style="font-size: 12px; opacity: 0.6;">{post['time']}</div>
+                
+                <div class="{post['css']} badge" style="margin-bottom: 0px; padding: 4px 10px; font-size: 13px;">
+                    <span>{post['emoji']}</span>
+                    <span>{post['label']}</span>
+                    <span style="opacity: 0.7; font-size: 11px; margin-left: 2px;">({conf_pct})</span>
                 </div>
+                
             </div>
+            
             <div style="font-size: 16px; margin-bottom: 20px;">
                 {post['text']}
             </div>
-            """, unsafe_allow_html=True)
+            """
             
-            # Interactive Buttons (Like, Repost) on their own row
+            # THE FIX: Replace the newlines to prevent the Markdown code block bug!
+            st.markdown(post_html.replace('\n', ''), unsafe_allow_html=True)
+            
+            # Interactive Buttons (Like, Repost)
             act1, act2, _ = st.columns([2, 2, 6])
             
             heart_icon = "❤️" if post['is_liked'] else "🤍"
             act1.button(f"{heart_icon} {post['likes']}", key=f"like_{post['id']}_pg_{page}", on_click=toggle_like, args=(idx,))
             
-            repost_icon = "🔁" if post.get('is_reposted', False) else "🔄"
+            repost_icon = "🔄" if post.get('is_reposted', False) else "🔄"
             act2.button(f"{repost_icon} {post.get('reposts', 0)}", key=f"repost_{post['id']}_pg_{page}", on_click=toggle_repost, args=(idx,))
             
-            # Move the Expander OUT of the nested columns so it sits nicely below the buttons
+            # Comments Section
             with st.expander(f"💬 View/Add Comments ({len(post['comments'])})", expanded=False):
                 if len(post['comments']) > 0:
                     for c_idx, comment in enumerate(post['comments']):
-                        # Because the expander is no longer in a nested column, this is allowed!
                         c_col1, c_col2 = st.columns([8, 2])
                         with c_col1:
                             st.markdown(f"""
@@ -189,30 +231,14 @@ def render_post_card(idx, post):
                         add_comment(idx, new_c_text)
                         st.rerun()
 
-    with right_col:
-        with st.container(border=True):
-            st.markdown(f"""
-            <div style="font-size: 13px; font-weight: 600; opacity: 0.7; margin-bottom: 10px;">Classification:</div>
-            <div class="{post['css']} badge">
-                <span>{post['emoji']}</span>
-                <span>{post['label']}</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Emotional Intensity: High</span>
-                <div class="progress-bg"><div class="progress-fill" style="width: 85%;"></div></div>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Sentiment: Negative</span>
-                <div class="progress-bg"><div class="progress-fill" style="width: 70%;"></div></div>
-            </div>
-            """, unsafe_allow_html=True)
-
-
 # ==========================================
 # 4. SIDEBAR NAVIGATION
 # ==========================================
 with st.sidebar:
-    st.markdown("<h2 style='text-align: center;'>🫀 MindPulse</h2><br>", unsafe_allow_html=True)
+    # A sleek, modern SVG pulse icon
+    pulse_logo = '''<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px; margin-bottom: 4px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>'''
+    
+    st.markdown(f"<h2 style='display: flex; align-items: center; justify-content: center;'>🧠 MindPulse</h2><br>", unsafe_allow_html=True)
     page = option_menu(
         menu_title=None,  
         options=["Home", "Profile", "About Us", "Model Info"],
@@ -235,8 +261,8 @@ if page == "Home":
     st.markdown("<h2 style='text-align: center; margin-bottom: 30px;'>Home Feed</h2>", unsafe_allow_html=True)
 
     with st.container():
-        col1, col2, col3 = st.columns([1, 6, 1])
-        with col2:
+        _, form_col, _ = st.columns([1, 8, 1])
+        with form_col:
             with st.form(key='post_form', clear_on_submit=True):
                 user_text = st.text_input("Describe your thoughts...", placeholder="Type a new post...")
                 submit_btn = st.form_submit_button(label="Analyze & Post")
@@ -244,12 +270,16 @@ if page == "Home":
     if submit_btn and user_text.strip() and classifier:
         with st.spinner("Processing NLP sequence..."):
             result = classifier(user_text)
+            
+            # We now extract both the label and the confidence score from the pipeline output
             display_name, css_class, emoji = map_label(result[0]['label'])
+            confidence_score = result[0]['score'] 
             
             new_post = {
                 "id": f"post_new_{len(st.session_state.feed)}",
                 "user": "You", "time": "Just now",
-                "text": user_text, "label": display_name, "css": css_class, "emoji": emoji,
+                "text": user_text, 
+                "label": display_name, "css": css_class, "emoji": emoji, "confidence": confidence_score,
                 "likes": 0, "is_liked": False, 
                 "reposts": 0, "is_reposted": False,
                 "comments": []
@@ -259,40 +289,11 @@ if page == "Home":
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Render all posts on Home feed
+    # Render all posts
     for idx, post in enumerate(st.session_state.feed):
         render_post_card(idx, post)
 
-elif page == "Profile":
-    st.markdown("<h2 style='text-align: center; margin-bottom: 30px;'>👤 Your Profile</h2>", unsafe_allow_html=True)
-    
-    tab1, tab2 = st.tabs(["My Posts", "My Reposts"])
-    
-    with tab1:
-        st.subheader("Posts created by you")
-        my_posts_rendered = False
-        for idx, post in enumerate(st.session_state.feed):
-            if post['user'] == "You":
-                render_post_card(idx, post)
-                my_posts_rendered = True
-        
-        if not my_posts_rendered:
-            st.info("You haven't made any posts yet. Head over to the Home feed to create one!")
 
-    with tab2:
-        st.subheader("Posts you have reposted")
-        reposts_rendered = False
-        for idx, post in enumerate(st.session_state.feed):
-            if post.get('is_reposted', False):
-                render_post_card(idx, post)
-                reposts_rendered = True
-                
-        if not reposts_rendered:
-            st.info("You haven't reposted anything yet. Try clicking the repost button on the Home feed!")
-
-# ==========================================
-# Placeholder Pages & Documentation
-# ==========================================
 elif page == "Profile":
     st.markdown("<h2 style='text-align: center; margin-bottom: 30px;'>👤 Your Profile</h2>", unsafe_allow_html=True)
     
@@ -343,11 +344,11 @@ elif page == "About Us":
         st.markdown("""
         | Student Name | Student ID | Core Contributions |
         | :--- | :--- | :--- |
-        | **JIN QIN** | U2103281 | Model Training & Evaluation |
-        | **LEE JER SHEN** | U2103193 | Model Architecture Design & Training |
-        | **CHEONG MENG BEN** | 24051211 | App Deployment |
-        | **HO WEI WEN** | 23097016 | Problem Statement, Objectives, Issues & Challenges |
-        | **KENNETH WONG WEI KEONG** | U2103199/1 | Data Source Sourcing & Preprocessing Pipeline |
+        | **JIN QIN** | U2103281 | Documentation Leader |
+        | **LEE JER SHEN** | U2103193 | Machine Learning Engineer |
+        | **CHEONG MENG BEN** | 24051211 | Deployment Engineer |
+        | **HO WEI WEN** | 23097016 | Presenter |
+        | **KENNETH WONG WEI KEONG** | U2103199/1 | Data Engineer |
         """)
 
 elif page == "Model Info":
