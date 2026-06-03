@@ -2,6 +2,11 @@ import streamlit as st
 from transformers import pipeline
 from datetime import datetime
 from streamlit_option_menu import option_menu
+import re
+import html
+import emoji
+import emot
+import unicodedata
 
 # ==========================================
 # 1. PAGE CONFIGURATION & CSS
@@ -46,13 +51,214 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
+# 1.5 NLP PREPROCESSING PIPELINE
+# ==========================================
+# Initialize emot parser for text-based emoticons
+emot_obj = emot.core.emot()
+
+# Manual mapping for common emoticons missed by the emot library
+MANUAL_EMOTICON_MAP = {
+    r'<\s*3': 'love heart',
+    r':\s*\)': 'happy smile',
+    r':-\s*\)': 'happy smile',
+    r'\(\s*:': 'happy smile',
+    r'\(-:': 'happy smile',
+    r';\s*\)': 'wink smile',
+    r';-\s*\)': 'wink smile',
+    r'=\s*\)': 'happy smile',
+    r':\s*\((?![A-Za-z0-9-])': 'sad face',
+    r':-\s*\((?![A-Za-z0-9-])': 'sad face',
+    r'\)\s*:': 'sad face',
+    r';\s*\((?![A-Za-z0-9-])': 'crying sad face',
+    r';-\s*\((?![A-Za-z0-9-])': 'crying sad face',
+    r'=\s*\((?![A-Za-z0-9-])': 'sad face',
+    r":\s*['‘’ʼ`´′＇]\s*\(": 'crying sad face',
+    r":\s*['‘’ʼ`´′＇]\s*[cC]\b": 'crying sad face',
+    r":\s*['‘’ʼ`´′＇]\s*\)": 'tears of happiness face',
+    r":\s*['‘’ʼ`´′＇]\s*[dD]\b": 'crying laughing face',
+    r'\bxD\b': 'laughing face',
+    r'\bxd\b': 'laughing face',
+    r'\bXd\b': 'laughing face',
+    r'\bXD\b': 'laughing face',
+    r':\s*[pP]\b': 'playful face',
+    r':-\s*[pP]\b': 'playful face',
+    r';\s*[pP]\b': 'playful face',
+    r';-\s*[pP]\b': 'playful face',
+    r'\bxP\b': 'playful face',
+    r'\bXP\b': 'playful face',
+    r':\s*/': 'skeptical uneasy face',
+    r':-\s*/': 'skeptical uneasy face',
+    r'/\s*:': 'skeptical uneasy face',
+    r'\bDx\b': 'distressed face',
+    r'\bDX\b': 'distressed face',
+    r'x\s*\)': 'happy smile',
+    r'x\s*\(': 'sad face',
+    r'\)\s*;': 'crying sad face',
+    r'\(\s*;': 'wink smile',
+    r'\(\s*=': 'happy smile',
+    r'\)\s*=': 'sad face',
+    r':\s*-?\s*\)': 'happy smile',
+    r';\s*-?\s*\)': 'wink smile',
+    r'=\s*-?\s*\)': 'happy smile',
+    r':\s*-?\s*\((?![A-Za-z0-9-])': 'sad face',
+    r';\s*-?\s*\((?![A-Za-z0-9-])': 'crying sad face',
+    r'=\s*-?\s*\((?![A-Za-z0-9-])': 'sad face',
+    r'\(\s*-?\s*:': 'happy smile',
+    r'\(\s*-?\s*;': 'wink smile',
+    r'\(\s*-?\s*=': 'happy smile',
+    r'\)\s*-?\s*:': 'sad face',
+    r'\)\s*-?\s*;': 'crying sad face',
+    r'\)\s*-?\s*=': 'sad face',
+    r':\s*-?\s*/': 'skeptical uneasy face',
+    r';\s*-?\s*/': 'skeptical uneasy face',
+    r'/\s*-?\s*:': 'skeptical uneasy face',
+    r'/\s*-?\s*;': 'skeptical uneasy face',
+    r':\s*-?\s*[pP]\b': 'playful face',
+    r';\s*-?\s*[pP]\b': 'playful face',
+    r'=\s*-?\s*[pP]\b': 'playful face',
+    r":\s*[\'’]\s*\)": "tears of happiness face",
+    r"=\s*[\'’]\s*\)": "crying sad face",
+    r":\s*[\'’]\s*/": "crying uneasy face",
+    r":\s*[\'’]\s*\|": "uneasy face",
+    r";\s*[\'’]\s*\(": "crying sad face",
+    r":-D": "big happy smile",
+    r":[vV]\b": "playful face",
+    r":[cC]\b": "sad face",
+    r":[sS]\b": "confused uneasy face",
+    r":[dD]\b": "big happy smile",
+    r";c\b": "crying sad face",
+    r";3\b": "playful cute face",
+    r";[vV];": "crying face",
+    r";[wW];": "crying face",
+    r"<\s*3": "love heart",
+    r"[xX]\.x": "dizzy face",
+    r"x-x": "dizzy face",
+    r"T-T": "crying face",
+    r"u\.u": "sad disappointed face",
+    r"u-u": "sad disappointed face",
+    r"v\.v": "sad disappointed face",
+    r"U\.U": "sad disappointed face",
+    r"[oO]\.o": "confused face",
+    r"0-o": "confused face",
+    r"\^\s*\^": "happy cute face",
+    r"¯\s*\([^)]*ツ[^)]*\)\s*/¯": "shrug face",
+    r"\(◍•ᴗ•◍\)": "happy cute face",
+    r"｡◕‿◕｡": "happy cute face",
+    r"ಠ╭╮ಠ": "disappointed face",
+    r"\(´ー｀\)": "relieved face",
+    r"༎ຶ‿༎ຶ": "crying face",
+    r"\(´;︵;\s*\)": "crying sad face",
+    r"\(´-﹏-\s*；\)/": "sad worried face",
+    r"\(╯︵╰\)": "sad face",
+    r"\(-\s*-メ\)": "annoyed face",
+    r"•́\s*‿\s*,•̀": "sad pleading face",
+    r'\^\s*-\s*\^': 'happy smile',
+    r'\^\s*\.\s*\^': 'happy smile',
+    r'-\s*\.\s*-': 'annoyed face',
+    r"=\s*['‘’ʼ`´′＇]\s*\)": 'crying smile face',
+    r':-\s*[xX]\b': 'sealed lips face',
+    r'<\s*/\s*3': 'broken heart',
+    r'\^\s*[-_.]?\s*\^': 'happy smile',
+    r':\s*\^\s*\(': 'sad face',
+    r':\s*\^\s*\)': 'happy smile',
+    r':\s*\^\s*[dD]\b': 'happy grin',
+    r':\s*\^\s*\|': 'neutral face',
+    r"=\s*[oO]\b": 'surprised face',
+    r';\s*-\s*;': 'crying face',
+    r'=\s*\.\s*=': 'annoyed face',
+    r'<\s*\.\s*<': 'side eye face',
+}
+
+UNICODE_SYMBOL_PATTERN = re.compile(r'[\U0001F300-\U0001FAFF\u2600-\u27BF]')
+
+def normalize_emotion_symbols(text):
+    text = str(text)
+    text = emoji.demojize(text, language='en')
+    text = re.sub(r':([a-zA-Z0-9_+\-]+):', r' \1 ', text)
+    text = text.replace('_', ' ')
+    for pattern, meaning in MANUAL_EMOTICON_MAP.items():
+        text = re.sub(pattern, f' {meaning} ', text, flags=re.IGNORECASE)
+    emoticon_result = emot_obj.emoticons(text)
+    if emoticon_result.get('flag'):
+        values = emoticon_result.get('value', [])
+        meanings = emoticon_result.get('mean', [])
+        pairs = sorted(zip(values, meanings), key=lambda x: len(x[0]), reverse=True)
+        for value, meaning in pairs:
+            cleaned_meaning = re.sub(r'[^A-Za-z0-9\s]', ' ', str(meaning))
+            cleaned_meaning = re.sub(r'\s+', ' ', cleaned_meaning).strip()
+            text = re.sub(re.escape(value), f' {cleaned_meaning} ', text)
+    return text
+
+def final_residual_emoticon_cleanup(text):
+    text = str(text)
+    residual_map = {
+        r":\s*['‘’ʼ`´′＇]\s*\)": "tears of happiness face",
+        r":\s*-?\s*\((?![A-Za-z0-9-])": "sad face",
+        r";\s*-?\s*\((?![A-Za-z0-9-])": "crying sad face",
+        r"=\s*-?\s*\((?![A-Za-z0-9-])": "sad face",
+        r"(?<![A-Za-z0-9]):\s*/(?![A-Za-z0-9])": "skeptical uneasy face",
+        r"\(´;︵;\s*\)": "crying sad face",
+    }
+    for pattern, meaning in residual_map.items():
+        text = re.sub(pattern, f" {meaning} ", text, flags=re.IGNORECASE)
+    return text
+
+def convert_leftover_unicode_symbols(text):
+    def replace_symbol(match):
+        symbol = match.group(0)
+        symbol_name = unicodedata.name(symbol, '')
+        if not symbol_name:
+            return ' '
+        return ' ' + symbol_name.lower().replace('-', ' ') + ' '
+    return UNICODE_SYMBOL_PATTERN.sub(replace_symbol, text)
+
+def repeated_html_unescape(text, max_iter=3):
+    text = str(text)
+    for _ in range(max_iter):
+        new_text = html.unescape(text)
+        if new_text == text:
+            break
+        text = new_text
+    return text
+
+def clean_reddit_text(text, lowercase=True, remove_punctuation=False):
+    text = str(text)
+    text = repeated_html_unescape(text)
+    text = re.sub(r'(?:x200b|u200b|\\u200b|&#x200b;)', ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'[\u200b\u200c\u200d\ufe0e\ufe0f]', ' ', text)
+    text = re.sub(r'https?://\S+|www\.\S+', ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bhttps?\b', ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'<.*?>', ' ', text)
+    text = re.sub(r'(?<![A-Za-z0-9])/?u/[A-Za-z0-9_-]+', ' USER ', text, flags=re.IGNORECASE)
+    text = re.sub(r'(?<![A-Za-z0-9])/?r/[A-Za-z0-9_-]+', ' SUBREDDIT ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\[(?:removed|deleted|view poll)\]', ' ', text, flags=re.IGNORECASE)
+    text = normalize_emotion_symbols(text)
+    text = convert_leftover_unicode_symbols(text)
+    text = re.sub(r'&[A-Za-z]+;', ' ', text)
+    text = re.sub(r'[\[\]]', ' ', text)
+    text = re.sub(r'[*_`~>#]+', ' ', text)
+    text = re.sub(r'\\+', ' ', text)
+    text = re.sub(r'\(\s*\)', ' ', text)
+    text = re.sub(r'\[\s*\]', ' ', text)
+    text = re.sub(r'\{\s*\}', ' ', text)
+    text = re.sub(r'\(\s*[^A-Za-z0-9]+\s*\)', ' ', text)
+    text = re.sub(r'\[\s*[^A-Za-z0-9]+\s*\]', ' ', text)
+    text = re.sub(r'\{\s*[^A-Za-z0-9]+\s*\}', ' ', text)
+    text = final_residual_emoticon_cleanup(text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+# ==========================================
 # 2. STATE MANAGEMENT & HELPERS
 # ==========================================
 @st.cache_resource
 def load_model():
     try:
-        return pipeline("text-classification", model="bhadresh-savani/distilbert-base-uncased-emotion")
-    except:
+        # Replace "your-username" with your actual Hugging Face username!
+        return pipeline("text-classification", model="ben9899/mindpulse-mentalbert")
+    except Exception as e:
+        # This will print the error to your app if it fails to load, helping us debug!
+        st.error(f"Model loading failed: {e}") 
         return None
 
 classifier = load_model()
@@ -75,7 +281,7 @@ if 'feed' not in st.session_state:
         {
             "id": "post_sw_1", "user": "Anon_821", "time": "Just now", 
             "text": "Goodbye.", 
-            "label": "Suicide Watch", "css": "badge-suicidewatch", "emoji": "🚨", "confidence": 0.98,
+            "label": "Suicide Watch", "css": "badge-suicidewatch", "emoji": "🚨", "confidence": 0.784,
             "likes": 2, "is_liked": False, "reposts": 0, "is_reposted": False,
             "comments": [
                 {"user": "AutoMod", "time": "Just now", "text": "If you or someone you know is struggling, please reach out for help immediately. You can dial 988 or text HOME to 741741 to reach the Crisis Text Line. You are not alone and help is available.", "likes": 12, "is_liked": False},
@@ -85,7 +291,7 @@ if 'feed' not in st.session_state:
         {
             "id": "post_anx_1", "user": "Runner_99", "time": "20 mins ago", 
             "text": "I feel like I panic so hard If I don't eat well enough before or immediately after a run. If I eat too much or unhealthy though, I also panic. Anyone else?", 
-            "label": "Anxiety", "css": "badge-anxiety", "emoji": "😰", "confidence": 0.92,
+            "label": "Anxiety", "css": "badge-anxiety", "emoji": "😰", "confidence": 0.978,
             "likes": 45, "is_liked": False, "reposts": 3, "is_reposted": False,
             "comments": [
                 {"user": "HealthNut", "time": "15 mins ago", "text": "Yes! Blood sugar spikes and drops can trigger physiological responses that perfectly mimic anxiety attacks. It happens to me too.", "likes": 18, "is_liked": False},
@@ -95,16 +301,34 @@ if 'feed' not in st.session_state:
         {
             "id": "post_dep_1", "user": "Tired_01", "time": "1 hr ago", 
             "text": "I want to feel notmal. I am tired and sick of everyday struggles. I have no one nothing in my life", 
-            "label": "Depression", "css": "badge-depression", "emoji": "😔", "confidence": 0.95,
+            "label": "Depression", "css": "badge-depression", "emoji": "😔", "confidence": 0.352,
             "likes": 89, "is_liked": False, "reposts": 12, "is_reposted": False,
             "comments": [
                 {"user": "BlueSky", "time": "45 mins ago", "text": "I hear you. The exhaustion is so heavy sometimes. Just taking it one hour at a time is enough for today.", "likes": 24, "is_liked": False}
             ]
         },
         {
+            "id": "post_lon_2", "user": "John Doe", "time": "1 hr ago", 
+            "text": "Online and in real life nobody notices me and nobody cares and it just makes me feel sad", 
+            "label": "Loneliness", "css": "badge-lonely", "emoji": "😶", "confidence": 0.617,
+            "likes": 23, "is_liked": False, "reposts": 1, "is_reposted": False,
+            "comments": [
+                {"user": "BestFriend", "time": "50 mins ago", "text": "We are always here buddy", "likes": 2, "is_liked": False}
+            ]
+        },
+        {
+            "id": "post_mh_2", "user": "User564", "time": "2 hrs ago", 
+            "text": "I have always talked to myself, not in the arguing multiple personality type of way, but just openly fielding my thoughts and talking it over. It's helps me visualize and break down my thoughts about certain decisions and such. Is this crazy or normal? I'm not losing arguments with myself or anything like that.", 
+            "label": "Mental Health", "css": "badge-mentalhealth", "emoji": "🌱", "confidence": 0.954,
+            "likes": 30, "is_liked": False, "reposts": 2, "is_reposted": False,
+            "comments": [
+                {"user": "User587", "time": "2 hrs ago", "text": "It's a healthy way to process your thoughts and emotions.", "likes": 20, "is_liked": False}
+            ]
+        },
+        {
             "id": "post_mh_1", "user": "HealingJourney", "time": "3 hrs ago", 
             "text": "therapy today at two , wish me luck", 
-            "label": "Mental Health", "css": "badge-mentalhealth", "emoji": "🌱", "confidence": 0.88,
+            "label": "Anxiety", "css": "badge-anxiety", "emoji": "😰", "confidence": 0.422,
             "likes": 156, "is_liked": False, "reposts": 4, "is_reposted": False,
             "comments": [
                 {"user": "Dr_Smith", "time": "2 hrs ago", "text": "The hardest part is simply showing up. Proud of you for taking this step!", "likes": 40, "is_liked": False},
@@ -114,7 +338,7 @@ if 'feed' not in st.session_state:
         {
             "id": "post_lon_1", "user": "Echo_Chamber", "time": "5 hrs ago", 
             "text": "Need someone to talk to", 
-            "label": "Loneliness", "css": "badge-lonely", "emoji": "😶", "confidence": 0.91,
+            "label": "Loneliness", "css": "badge-lonely", "emoji": "😶", "confidence": 0.359,
             "likes": 34, "is_liked": False, "reposts": 1, "is_reposted": False,
             "comments": [
                 {"user": "NightOwl", "time": "4 hrs ago", "text": "Hey, I'm around. What's on your mind today?", "likes": 6, "is_liked": False},
@@ -277,7 +501,11 @@ if page == "Home":
 
     if submit_btn and user_text.strip() and classifier:
         with st.spinner("Processing NLP sequence..."):
-            result = classifier(user_text)
+            # 1. Clean the user's text exactly like the training data
+            cleaned_input = clean_reddit_text(user_text)
+            
+            # 2. Feed the cleaned string to the pipeline
+            result = classifier(cleaned_input)
             
             # We now extract both the label and the confidence score from the pipeline output
             display_name, css_class, emoji = map_label(result[0]['label'])
