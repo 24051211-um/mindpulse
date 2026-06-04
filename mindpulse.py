@@ -280,8 +280,8 @@ if 'feed' not in st.session_state:
     st.session_state.feed = [
         {
             "id": "post_sw_1", "user": "Anon_821", "time": "Just now", 
-            "text": "Goodbye.", 
-            "label": "Suicide Watch", "css": "badge-suicidewatch", "emoji": "🚨", "confidence": 0.784,
+            "text": "2022. Just another year to be miserable. Might as well end it here in 2021.", 
+            "label": "Suicide Watch", "css": "badge-suicidewatch", "emoji": "🚨", "confidence": 0.717,
             "likes": 2, "is_liked": False, "reposts": 0, "is_reposted": False,
             "comments": [
                 {"user": "AutoMod", "time": "Just now", "text": "If you or someone you know is struggling, please reach out for help immediately. You can dial 988 or text HOME to 741741 to reach the Crisis Text Line. You are not alone and help is available.", "likes": 12, "is_liked": False},
@@ -337,12 +337,11 @@ if 'feed' not in st.session_state:
         },
         {
             "id": "post_lon_1", "user": "Echo_Chamber", "time": "5 hrs ago", 
-            "text": "Need someone to talk to", 
-            "label": "Loneliness", "css": "badge-lonely", "emoji": "😶", "confidence": 0.359,
+            "text": "I am alone, at home, during new years and it sucks to be not a part of anything anywhere :(", 
+            "label": "Loneliness", "css": "badge-lonely", "emoji": "😶", "confidence": 0.861,
             "likes": 34, "is_liked": False, "reposts": 1, "is_reposted": False,
             "comments": [
-                {"user": "NightOwl", "time": "4 hrs ago", "text": "Hey, I'm around. What's on your mind today?", "likes": 6, "is_liked": False},
-                {"user": "FriendlyStranger", "time": "3 hrs ago", "text": "Sending a virtual hug. Feel free to vent here, we are listening.", "likes": 9, "is_liked": False}
+                {"user": "NightOwl", "time": "4 hrs ago", "text": "Hey, I'm around. We can always hangout together", "likes": 6, "is_liked": False}
             ]
         }
     ]
@@ -564,6 +563,8 @@ elif page == "About Us":
         st.subheader("Welcome to the MindPulse NLP Classification Project")
         st.write("This application was developed by **Group 9** for the **WQF7007 Natural Language Processing** coursework.")
         
+        st.markdown("💻 **Source Code:** [GitHub](https://github.com/24051211-um/mindpulse/blob/main/mindpulse.py)")
+        
         st.divider()
         
         st.subheader("Our Mission")
@@ -578,25 +579,35 @@ elif page == "About Us":
         
         # Using a Markdown table for a clean, native Streamlit layout
         st.markdown("""
-        | Student Name | Student ID | Core Contributions |
-        | :--- | :--- | :--- |
-        | **JIN QIN** | U2103281 | Documentation Leader |
-        | **LEE JER SHEN** | U2103193 | Machine Learning Engineer |
-        | **CHEONG MENG BEN** | 24051211 | Deployment Engineer |
-        | **HO WEI WEN** | 23097016 | Presenter |
-        | **KENNETH WONG WEI KEONG** | U2103199/1 | Data Engineer |
+        | Student Name | Core Contributions |
+        | :--- | :--- |
+        | **JIN QIN** | Documentation Leader |
+        | **LEE JER SHEN** | Machine Learning Engineer |
+        | **CHEONG MENG BEN** | Deployment Engineer |
+        | **HO WEI WEN** | Presenter |
+        | **KENNETH WONG WEI KEONG** | Data Engineer |
         """)
 
 elif page == "Model Info":
     st.markdown("<h2 style='text-align: center; margin-bottom: 30px;'>⚙️ Model Information</h2>", unsafe_allow_html=True)
     
     with st.container(border=True):
-        st.subheader("The Dataset")
-        st.write("The models are trained on the Reddit Mental Health Dataset (RMHD) sourced from Kaggle, covering posts from January 2019 to August 2022. After extensive cleaning using Python's Regular Expressions and emoji libraries, the data was rigorously balanced to contain exactly 50,000 posts for each of the five target subreddits: mentalhealth, anxiety, depression, lonely, and SuicideWatch.")
+        st.subheader("The Dataset & Pre-processing Pipeline")
+        st.write("The models are trained on the Reddit Mental Health Dataset (RMHD) sourced from Kaggle, covering posts from January 2019 to August 2022. To preserve the structural integrity and context required for transformer models, traditional methods like stemming or stop-word removal were avoided. Instead, a specialized NLP pipeline was applied:")
+        
+        st.markdown("""
+        * **Noise Removal & Anonymization:** Stripped URLs, HTML tags, and Reddit artifacts (e.g., `[removed]`). Usernames and subreddit mentions were anonymized to `USER` and `SUBREDDIT` to prevent the model from learning spurious associations.
+        * **Emotion Normalization Cascade:** Recognizing that emoticons are critical semantic signals in mental health discourse, a 3-layer cascade (using Unicode demojization, a custom 80+ regex lexicon, and the `emot` library) translated symbols like `T-T` or `XD` into explicit English text descriptions.
+        * **Deduplication & Balancing:** Removed over 7,800 duplicate documents to prevent data leakage. The final dataset was rigorously balanced to exactly 50,000 posts for each of the 5 target classes, then split 80/10/10 for training, validation, and testing.
+        """)
 
         st.divider()
 
         st.subheader("Model Architectures")
+        
+        # Hugging Face Link
+        st.markdown("🤗 **Trained Model Weights:** [View MentalBERT on Hugging Face](https://huggingface.co/ben9899/mindpulse-mentalbert/tree/main)")
+        
         st.write("This system evaluates two pre-trained transformer models fine-tuned for sequence classification:")
         st.markdown("""
         * **Baseline Model (BERT):** A general-purpose language model featuring 12 transformer encoder layers, 12 attention heads, and approximately 110 million trainable parameters. It was pre-trained on the BooksCorpus and English Wikipedia.
@@ -605,8 +616,39 @@ elif page == "Model Info":
 
         st.divider()
 
-        st.subheader("Fine-Tuning & Pipeline Mechanics")
+        st.subheader("Fine-Tuning & Training Optimization")
+        st.write("To adapt the 110M parameter models to our 200k post dataset, several optimization techniques were applied:")
         st.markdown("""
-        * **Tokenization:** Text is converted to subword token IDs using the WordPiece algorithm, normalized to a maximum sequence length of 512 tokens.
-        * **Classification Head:** The aggregate semantic representation of the post is extracted and fed into a classification head consisting of a Dropout layer (rate = 0.1) and a Linear layer. This outputs 5 logits passed through a softmax function to determine the highest probability class.
+        * **Mixed Precision Training (FP16):** Used 16-bit floating point arithmetic for forward/backward passes to reduce GPU memory consumption by 50%, while maintaining 32-bit gradients for stability.
+        * **Regularization:** Applied L2 Weight Decay (0.01), Dropout (p=0.1), and Gradient Clipping (1.0) to prevent overfitting.
+        * **AdamW Optimization:** Utilized a warmup-then-linear-decay schedule (reaching 2e-5 over 5,000 steps) to stabilize early training gradients.
+        * **Early Stopping:** Training monitored validation loss with a patience of 2 epochs, restoring the best-performing checkpoint.
+        """)
+
+        st.divider()
+
+        st.subheader("Performance Evaluation & Insights")
+        st.write("Both the baseline and proposed models were evaluated on the 25,000 sample balanced test set. The side by side performance metrics are as follows:")
+        
+        st.markdown("""
+        | Metric | BERT (Baseline) | MentalBERT (Proposed) |
+        | :--- | :--- | :--- |
+        | **Macro ROC-AUC** | 0.9140 | 0.9144 |
+        | **Accuracy** | 0.7009 | 0.7017 |
+        | **Macro Precision** | 0.7009 | 0.7031 |
+        | **Macro Recall** | 0.7009 | 0.7017 |
+        | **Macro F1** | 0.6987 | 0.7012 |
+        | **MCC** | 0.6272 | 0.6277 |
+        """)
+        
+        st.markdown("#### Key Findings")
+        st.info("""
+        **1. Semantic Overlap vs. Model Failure:**
+        While Anxiety and Loneliness were highly distinctive (F1 ~0.82), Depression performed weakest (F1=0.52). The confusion matrix revealed that over 1,250 Depression posts were classified as SuicideWatch. This reflects genuine clinical and semantic overlap between the two states rather than a model failure.
+        
+        **2. High Crisis Recall:**
+        Crucially for a screening tool, the model maintained a high recall (0.756) for SuicideWatch, successfully catching the vast majority of high-risk crisis posts.
+        
+        **3. Probability Calibration:**
+        A high Macro ROC-AUC (0.914) compared to overall accuracy (~0.70) indicates that the model ranks classes very well and outputs well-calibrated probability distributions, even if it struggles at the exact decision boundaries of comorbid conditions.
         """)
